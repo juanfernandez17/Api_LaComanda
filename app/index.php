@@ -22,9 +22,7 @@ $dotenv->safeLoad();
 // Instantiate App
 $app = AppFactory::create();
 $app->setBasePath('/PROG_TP_LaComanda');
-$app->addRoutingMiddleware();
-$app->addErrorMiddleware(true, true, true);
-$app->addBodyParsingMiddleware();
+
 
 $app->group('/empleado', function (RouteCollectorProxy $group) {
   $group->post('[/]', \EmpleadoController::class . '::CargarUno');
