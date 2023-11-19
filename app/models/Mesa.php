@@ -1,4 +1,5 @@
 <?php
+
 include_once './DataBase/DataAccess.php';
 
 class Mesa
@@ -9,8 +10,7 @@ class Mesa
     public $cant_utilizada;
     public $cant_facturacion;
     public $mayor_importe;
-    public $menor_importe;
-    
+    public $menor_importe;  
 
     public function __construct()
     {
@@ -89,6 +89,5 @@ class Mesa
 
         $query->execute();
     }
-
 }
 ?>

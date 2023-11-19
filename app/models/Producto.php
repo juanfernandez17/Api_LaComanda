@@ -27,7 +27,7 @@ class Producto
     public function getCantVendida() { return $this->cant_vendida; }
 
     public static function crearProducto($producto)
-    {        
+    {       
         $objDataAccess = DataAccess::getInstance();
         $query = $objDataAccess->prepareQuery("INSERT INTO productos (nombre, sector, precio, cant_vendida) VALUES (:nombre, :sector, :precio, :cant_vendida)");
         $query->bindValue(":nombre", $producto->getNombre(), PDO::PARAM_STR);
@@ -64,9 +64,9 @@ class Producto
         $query = $objDataAccess->prepareQuery("UPDATE Productos SET nombre = :nombre, sector = :sector, precio = :precio, cant_vendida = :cant_vendida WHERE id = :id");
         $query->bindValue(":id", $producto->getId(), PDO::PARAM_INT);
         $query->bindValue(":nombre", $producto->getNombre(), PDO::PARAM_STR);
-        $query->bindValue(":sector", $producto->getRol(), PDO::PARAM_STR);
-        $query->bindValue(":precio", $producto->getCantOperaciones(), PDO::PARAM_INT);        
-        $query->bindValue(":cant_vendida", $producto->getEstado(), PDO::PARAM_INT);
+        $query->bindValue(":sector", $producto->getSector(), PDO::PARAM_STR);
+        $query->bindValue(":precio", $producto->getPrecio(), PDO::PARAM_INT);        
+        $query->bindValue(":cant_vendida", $producto->getCantVendida(), PDO::PARAM_INT);
         $query->execute();
     }
 
@@ -79,5 +79,12 @@ class Producto
         $query->execute();
     }
 
+    public static function truncateTable()
+    {
+        $objDataAccess = DataAccess::getInstance();
+        $query = $objDataAccess->prepareQuery("TRUNCATE TABLE Productos");
+        $query->execute();
+        return $query->rowCount() > 0;
+    }
 }
 ?>

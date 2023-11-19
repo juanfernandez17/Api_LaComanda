@@ -9,17 +9,16 @@ class MesaController extends Mesa implements IInterfaceAPI
 {
     public static function CargarUno($request, $response, $args)
     {
-        $params = $request->getParsedBody();
-        $codigo_mesa = $params["codigo_mesa"];
-        $estado= $params["estado"];
+        $params = $request->getParsedBody();        
         $cant_utilizada = $params["cant_utilizada"];
         $cant_facturacion = $params["cant_facturacion"];
         $mayor_importe = $params["mayor_importe"];
         $menor_importe = $params["menor_importe"];       
 
         $mesa = new Mesa();
-        $mesa->codigo_mesa = $codigo_mesa;
-        $mesa->estado = $estado;
+        $mesa->codigo_mesa = self::GenerarCodigoMesa();
+        echo $mesa->codigo_mesa;
+        $mesa->estado = "Con cliente esperando pedido";
         $mesa->cant_utilizada = $cant_utilizada;
         $mesa->cant_facturacion = $cant_facturacion;
         $mesa->mayor_importe = $mayor_importe;
@@ -39,9 +38,16 @@ class MesaController extends Mesa implements IInterfaceAPI
         $id = $args['id'];
         $mesa = Mesa::obtenerMesa($id);
         
-        $payload = json_encode($mesa);
-        $response->getBody()->write($payload);
-      
+        if($mesa != null)
+        {
+            $payload = json_encode($mesa);
+            $response->getBody()->write($payload);
+        }
+        else
+        {
+            $payload = json_encode(array("mensaje" => "Error! El ID ingresado no corresponde a ninguna mesa."));
+            $response->getBody()->write($payload);
+        }      
         return $response->withHeader("Content-Type","application/json");    
     }
 
@@ -76,62 +82,73 @@ class MesaController extends Mesa implements IInterfaceAPI
 
     public static function ModificarUno($request, $response, $args)
     {
+        $response->withHeader('Content-Type', 'application/x-www-form-urlencoded'); 
         $id = $args['id'];
-        $mesa = Mesa::obtenerMessa($id);
-  
-        if ($mesa) 
-        {
-            $params = $request->getParsedBody();
+        $body = file_get_contents('php://input');
+        parse_str($body, $parametros);
+        $mesa = Mesa::obtenerMesa($id);
+            
+        if ($mesa != false) 
+        {    
+            $mesa->setEstado($parametros['estado']);
+            $mesa->setCantUtilizada($parametros['cant_utilizada']);
+            $mesa->setCantFacturacion($parametros['cant_facturacion']);
+            $mesa->setMayorImporte($parametros['mayor_importe']);
+            $mesa->setMenorImporte($parametros['menor_importe']);
+            Mesa::modificarMesa($mesa);
     
-            $actualizado = false;
-            if (isset($params['codigo_mesa']))
-            {
-                $actualizado = true;
-                $mesa->codigo_mesa= $params['codigo_mesa'];
-            }
-            if (isset($params['estado']))
-            {
-                $actualizado = true;
-                $mesa->estado = $params['estado'];
-            }
-            if(isset($params["cant_utilizada"]))
-            {
-                $actualizado = true;
-                $mesa->cant_utilizada = $params['cant_utilizada'];
-            }
-            if(isset($params["cant_facturacion"]))
-            {
-                $actualizado = true;
-                $mesa->cant_facturacion = $params['cant_facturacion'];
-            }
-            if(isset($params["mayor_importe"]))
-            {
-                $actualizado = true;
-                $mesa->mayor_importe = $params['mayor_importe'];
-            }  
-            if(isset($params["menor_importe"]))
-            {
-                $actualizado = true;
-                $mesa->menor_importe = $params['menor_importe'];
-            }          
-            if ($actualizado)
-            {
-                Mesa::modificar($mesa);
-                $payload = json_encode(array("mensaje" => "Se ha modificado la mesa con exito!"));
-            } 
-            else 
-            {
-                $payload = json_encode(array("mensaje" => "No se pudo modificar la mesa por no ingresar los datos correspondientes!"));
-            }    
-        } 
-        else 
-        {
-            $payload = json_encode(array("error" => "No existe mesa con el ID ingresado."));
+            $payload = json_encode(array("mensaje" => "Mesa modificada con exito"));
+            
+        } else {
+            $payload = json_encode(array("mensaje" => "Error! El ID ingresado no corresponde a ninguna mesa."));
         }
-    
         $response->getBody()->write($payload);
+        return $response
+            ->withHeader('Content-Type', 'application/x-www-form-urlencoded');
+    }
+
+    public static function cerrarMesa($request, $response, $args)
+    {
+        $id = $args['id'];
+        $mesa = Mesa::obtenerMesa($id);
         
-        return $response->withHeader('Content-Type', 'application/json');    
+        if($mesa != null)
+        {
+            $mesa->estado = "Cerrada";
+            Mesa::modificarMesa($mesa);
+            $payload = json_encode(array("mensaje" => "Se cerro la mesa con exito!"));
+            $response->getBody()->write($payload);
+        }
+        else
+        {
+            $payload = json_encode(array("mensaje" => "Error! El ID ingresado no corresponde a ninguna mesa."));
+            $response->getBody()->write($payload);
+        }      
+        return $response->withHeader("Content-Type","application/json");    
+    }
+
+    public static function GenerarCodigoMesa()
+    {
+        $caracteres = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $codigo = '';
+
+        $caracteresLength = strlen($caracteres);
+       
+        for ($i = 0; $i < 6; $i++) {
+            $codigo .= $caracteres[random_int(0, $caracteresLength - 1)];
+        }
+
+        // Verificar que el código no exista
+        $listaMesas = Mesa::obtenerMesas();
+
+        foreach($listaMesas as $mesas)
+        {
+            if($mesas->codigo_mesa == $codigo)
+            {
+                self::GenerarCodigoMesa();
+            }
+        }
+        return $codigo;
     }
 }
 

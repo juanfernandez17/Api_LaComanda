@@ -34,8 +34,17 @@ class ProductoController extends Producto implements IInterfaceAPI
         $id = $args['id'];
         $producto = Producto::obtenerProducto($id);
         
-        $payload = json_encode($producto);
-        $response->getBody()->write($payload);
+        if($producto != null)
+        {
+            $payload = json_encode($producto);
+            $response->getBody()->write($payload);
+        }
+        else
+        {
+            $payload = json_encode(array("mensaje" => "Error! El ID ingresado no corresponde a un producto."));
+            $response->getBody()->write($payload);
+        }
+       
       
         return $response->withHeader("Content-Type","application/json");    
     }
@@ -71,53 +80,102 @@ class ProductoController extends Producto implements IInterfaceAPI
 
     public static function ModificarUno($request, $response, $args)
     {
+        $response->withHeader('Content-Type', 'application/x-www-form-urlencoded'); 
         $id = $args['id'];
+        $body = file_get_contents('php://input');
+        parse_str($body, $parametros);
         $producto = Producto::obtenerProducto($id);
-  
-        if ($empleado) 
-        {
-            $params = $request->getParsedBody();
+            
+        if ($producto != false) 
+        {    
+            $producto->setNombre($parametros['nombre']);
+            $producto->setSector($parametros['sector']);
+            $producto->setPrecio($parametros['precio']);
+            $producto->setCantVendida($parametros['cant_vendida']);        
+            Producto::ModificarProducto($producto);
     
-            $actualizado = false;
-            if (isset($params['nombre']))
-            {
-                $actualizado = true;
-                $producto->nombre = $params['nombre'];
-            }
-            if (isset($params['sector']))
-            {
-                $actualizado = true;
-                $producto->sector = $params['sector'];
-            }
-            if(isset($params["precio"]))
-            {
-                $actualizado = true;
-                $producto->precio = $params['precio'];
-            }
-            if(isset($params["cant_vendida"]))
-            {
-                $actualizado = true;
-                $producto->cant_vendida = $params['cant_vendida'];
-            }          
-            if ($actualizado)
-            {
-                Producto::modificarProducto($producto);
-                $payload = json_encode(array("mensaje" => "Se ha modificado el producto con exito!"));
-            } 
-            else 
-            {
-                $payload = json_encode(array("mensaje" => "No se pudo modificar al producto por no ingresar los datos correspondientes!"));
-            }    
-        } 
-        else 
-        {
-            $payload = json_encode(array("error" => "No existe producto con el ID ingresado."));
+            $payload = json_encode(array("mensaje" => "Producto modificado con exito"));
+            
+        } else {
+            $payload = json_encode(array("mensaje" => "Error! El ID ingresado no corresponde a ningun producto."));
         }
-    
         $response->getBody()->write($payload);
+        return $response
+            ->withHeader('Content-Type', 'application/x-www-form-urlencoded');
+    }
+
+    public static function CargarProductosCSV($request, $response, $args)
+    {
+        $nombreArchivo = './archivoProductos.csv';
+        $archivo = fopen($nombreArchivo, "r");      
+
+        try 
+        {
+            Producto::truncateTable();
         
-        return $response->withHeader('Content-Type', 'application/json');    
+            while (!feof($archivo)) {
+
+                $linea = fgets($archivo);
+              //  echo $linea;
+                if (!empty($linea)) 
+                {                                     
+                    $data = explode(",", $linea);      
+                    
+                    foreach ($data as &$elemento) {
+                        $elemento = str_replace('"', '', $elemento);
+                    }
+                    $producto = new Producto();
+                    $producto->setNombre($data[1]);
+                    $producto->setSector($data[2]);
+                    $producto->setPrecio($data[3]);
+                    $producto->setCantVendida($data[4]);        
+                    
+                    Producto::crearProducto($producto);                    
+                }
+                $payload = json_encode(array("mensaje" => "Archivo cargado con exito!"));
+            }
+        } catch (Exception) {         
+            $payload = json_encode(array("mensaje" => "Error al cargar archivo de productos!"));
+        }finally{
+            fclose($archivo);         
+        }
+
+        $response->getBody()->write($payload);
+        return $response
+          ->withHeader('Content-Type', 'application/json');
+    }
+
+    public static function DescargarProductosCSV($request, $response, $args)
+    {       
+        $productos = Producto::obtenerProductos();     
+        $nombreArchivo = "./archivoProductos.csv";
+        $directorio = dirname($nombreArchivo, 1);
+        
+        try{
+            if(!file_exists($directorio))
+            {
+                mkdir($directorio);
+            }
+            $archivo = fopen($nombreArchivo, "w+");
+            
+            foreach ($productos as $p)
+            {            
+                fputcsv($archivo, get_object_vars($p));
+            }
+            $payload = json_encode(array("mensaje" => "Archivo generado con exito!"));
+        }
+        catch (Expection)
+        {
+            echo "Error al generar archivo CSV";
+            $payload = json_encode(array("mensaje" => "Error al descargar archivo!"));
+        }
+        finally
+        {
+            fclose($archivo);
+        }       
+        $response->getBody()->write($payload);
+       
+        return $response->withHeader("Content-Type","application/json");        
     }
 }
-
 ?>

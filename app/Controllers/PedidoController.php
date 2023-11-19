@@ -2,6 +2,8 @@
 use Slim\Http\Request;
 use Slim\Http\Response;
 
+require_once './Controllers/PedidoProductoController.php';
+require_once './models/Pedido_producto.php';
 require_once './models/Pedido.php';
 require_once './Interfaces/IInterfaceAPI.php';
 
@@ -10,39 +12,84 @@ class PedidoController extends Pedido implements IInterfaceAPI
     public static function CargarUno($request, $response, $args)
     {
         $params = $request->getParsedBody();
-        $codigo_pedido = $params["codigo_pedido"];
-        $estado = $params["estado"];
         $id_empleado = $params["id_empleado"];
+        $estado = $params["estado"];
         $id_mesa = $params["id_mesa"];                   
-        $id_producto = $params["id_producto"];
-        $nombre_cliente = $params["nombre_cliente"];
+        $productos = $params["productos"];        
         $tiempo_estimado = $params["tiempo_estimado"];
         
+        $array = json_decode($productos, true);
+        $empleado = Empleado::obtenerEmpleado($id_empleado);        
+        $mesa = Mesa::obtenerMesa($id_mesa);
+        $listaProductos = [];
 
-        $pedido = new Pedido();
-        $pedido->setCodigoPedido($codigo_pedido);        
-        $pedido->setEstado($estado);
-        $pedido->setIdEmpleado($id_empleado);
-        $pedido->setIdMesa($id_mesa);
-        $pedido->setIdProducto($id_producto);
-        $pedido->setNombreCliente($nombre_cliente);
-        $pedido->setTiempoEstimado($tiempo_estimado);
-        Pedido::crearPedido($pedido);
+        if($empleado != false && $array != null && $mesa != null)
+        {
+            $codigo_pedido = self::GenerarCodigoPedido();
+
+            foreach ($array as $item) {
         
-        $guardadojson = json_encode(array("mensaje" => "Pedido agregado con exito!"));
-        $response->getBody()->write($guardadojson);
+                $producto = Producto::obtenerProducto($item['id']);
+               
+                if($producto != null)
+                {              
+                    $pedido_producto = new Pedido_producto();
+                    $pedido_producto->codigo_mesa = $mesa->codigo_mesa;
+                    $pedido_producto->nombre_cliente = $item['nombre_cliente'];
+                    $pedido_producto->id_producto = $producto->id;
+                    $pedido_producto->estado = 'En preparación';
+                    $pedido_producto->codigo_pedido = $codigo_pedido;
+                    array_push($listaProductos, $pedido_producto);
+                }
+                else
+                {
+                     $payload = json_encode(array("mensaje" => "Error! ID de producto no válido."));
+                     $response->getBody()->write($payload);
+                }
+            }
+
+            foreach($listaProductos as $pedido_producto)
+            {          
+                Pedido_producto::crearPedidoProducto($pedido_producto);
+            }
+    
+            $pedido = new Pedido();
+            $pedido->setEstado($estado);
+            $pedido->setCodigoPedido($codigo_pedido);        
+            $pedido->setIdEmpleado($id_empleado);
+            $pedido->setIdMesa($id_mesa);
+            $pedido->setTiempoEstimado($tiempo_estimado);
+            Pedido::crearPedido($pedido);
+            
+            $guardadojson = json_encode(array("mensaje" => "Pedido agregado con exito!"));
+            $response->getBody()->write($guardadojson);
+        }
+        else
+        {
+             $payload = json_encode(array("mensaje" => "Error! ID de empleado, mesa o lista de productos ingresada no válida."));
+             $response->getBody()->write($payload);
+        }
+
+       
        
         return $response->withHeader("Content-Type","application/json");        
     }
 
     public static function TraerUno($request, $response, $args)
-    {        
-        $id = $args['id'];
-        $pedido = Pedido::obtenerPedido($id);
+    {                
+        $codigo_pedido = $args['codigoPedido'];
+        $pedido = Pedido::obtenerPedidoPorCodigo($codigo_pedido);
         
-        $payload = json_encode($pedido);
-        $response->getBody()->write($payload);
-      
+        if($pedido != null)
+        {
+            $payload = json_encode($pedido);
+            $response->getBody()->write($payload);
+        }
+        else
+        {
+            $payload = json_encode(array("mensaje" => "Error! El codigo ingresado no corresponde a ningun pedido."));
+            $response->getBody()->write($payload);
+        }
         return $response->withHeader("Content-Type","application/json");    
     }
 
@@ -58,11 +105,11 @@ class PedidoController extends Pedido implements IInterfaceAPI
 
     public static function BorrarUno($request, $response, $args)
     {
-        $id = $args['id'];
+        $codigo_pedido = $args['codigoPedido'];
 
-        if (Pedido::obtenerPedido($id) != false) 
+        if (Pedido::obtenerPedidoPorCodigo($codigo_pedido) != false) 
         {
-            Pedido::borrarPedido($id);
+            Pedido::BorrarPedido($codigo_pedido);
             $payload = json_encode(array("mensaje" => "Pedido borrado con exito!"));
         } 
         else 
@@ -113,6 +160,30 @@ class PedidoController extends Pedido implements IInterfaceAPI
         $response->getBody()->write($payload);
         
         return $response->withHeader('Content-Type', 'application/json');    
+    }
+
+    public static function GenerarCodigoPedido()
+    {
+        $caracteres = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        $codigo = '';
+
+        $caracteresLength = strlen($caracteres);
+       
+        for ($i = 0; $i < 6; $i++) {
+            $codigo .= $caracteres[random_int(0, $caracteresLength - 1)];
+        }
+
+        // Verificar que el código no exista
+        $listaPedidos = Pedido::obtenerPedidos();
+
+        foreach($listaPedidos as $pedidos)
+        {
+            if($pedidos->codigo_pedido == $codigo)
+            {
+                self::GenerarCodigoPedido();
+            }
+        }
+        return $codigo;
     }
 }
 

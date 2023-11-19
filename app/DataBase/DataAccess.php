@@ -37,6 +37,8 @@ class DataAccess
     {
         return $this->PDOObject->lastInsertId();
     }
+
+    
     
     public function __clone()
     {

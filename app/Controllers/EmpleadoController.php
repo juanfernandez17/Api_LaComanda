@@ -11,6 +11,8 @@ class EmpleadoController extends Empleado implements IInterfaceAPI
     {
         $params = $request->getParsedBody();
         $nombre = $params["nombre"];
+        $usuario = $params["usuario"];
+        $clave = $params["clave"];
         $rol = $params["rol"];
         $cant_operaciones = $params["cant_operaciones"];
         $estado= $params["estado"];
@@ -18,6 +20,8 @@ class EmpleadoController extends Empleado implements IInterfaceAPI
 
         $empleado = new Empleado();
         $empleado->nombre = $nombre;
+        $empleado->usuario = $usuario;
+        $empleado->clave = $clave;
         $empleado->rol = $rol;
         $empleado->cant_operaciones = $cant_operaciones;
         $empleado->estado = $estado;
@@ -74,57 +78,50 @@ class EmpleadoController extends Empleado implements IInterfaceAPI
 
     public static function ModificarUno($request, $response, $args)
     {
+        $response->withHeader('Content-Type', 'application/x-www-form-urlencoded'); 
         $id = $args['id'];
+        $body = file_get_contents('php://input');
+        parse_str($body, $parametros);
         $empleado = Empleado::obtenerEmpleado($id);
-  
-        if ($empleado) 
-        {
-            $params = $request->getParsedBody();
+            
+        if ($empleado != false) 
+        {    
+            $empleado->setNombre($parametros['nombre']);
+            $empleado->setUsuario($parametros['usuario']);
+            $empleado->setClave($parametros['clave']);
+            $empleado->setRol($parametros['rol']);
+            $empleado->setEstado($parametros['estado']);
+            Empleado::ModificarEmpleado($empleado);
     
-            $actualizado = false;
-            if (isset($params['nombre']))
-            {
-                $actualizado = true;
-                $empleado->nombre = $params['nombre'];
-            }
-            if (isset($params['rol']))
-            {
-                $actualizado = true;
-                $empleado->rol = $params['rol'];
-            }
-            if(isset($params["cant_operaciones"]))
-            {
-                $actualizado = true;
-                $empleado->cant_operaciones = $params['cant_operaciones'];
-            }
-            if(isset($params["estado"]))
-            {
-                $actualizado = true;
-                $empleado->estado = $params['estado'];
-            }
-            if(isset($params["fecha_alta"]))
-            {
-                $actualizado = true;
-                $empleado->fecha_alta = $params['fecha_alta'];
-            }          
-            if ($actualizado)
-            {
-                Empleado::modificar($empleado);
-                $payload = json_encode(array("mensaje" => "Se ha modificado el emplado con exito!"));
-            } 
-            else 
-            {
-                $payload = json_encode(array("mensaje" => "No se pudo modificar al empleado por no ingresar los datos correspondientes!"));
-            }    
-        } 
-        else 
-        {
-            $payload = json_encode(array("error" => "No existe empleado con el ID ingresado."));
+            $payload = json_encode(array("mensaje" => "Empleado modificado con exito"));
+            
+        } else {
+            $payload = json_encode(array("mensaje" => "Error! El ID ingresado no corresponde a ningun empleado."));
         }
-    
         $response->getBody()->write($payload);
-        
-        return $response->withHeader('Content-Type', 'application/json');    
+        return $response
+            ->withHeader('Content-Type', 'application/x-www-form-urlencoded');
+    }
+
+    public static function Login($request, $response, $args)
+    {
+        $parametros = $request->getParsedBody();
+        $usuario = $parametros['usuario'];
+        $clave = $parametros['clave'];
+
+        $empleado = Empleado::verificarUsuarioClave($usuario, $clave);
+
+        if($empleado != null)
+        {
+            $data = array('empleado' => $empleado->usuario, 'rol' => $empleado->rol, 'contraseña' => $empleado->clave);
+            $creacion = AutentificadorJWT::CrearToken($data);
+        }
+       
+        $payload = json_encode(array("mensaje" => "Bienvenido $empleado->nombre!", "token" => $creacion['jwt']));
+
+        $response->getBody()->write($payload);
+        return $response
+        ->withHeader('Content-Type', 'application/json');
     }
 }
 
