@@ -103,6 +103,72 @@ class PedidoController extends Pedido implements IInterfaceAPI
         return $response->withHeader("Content-Type","application/json");    
     }
 
+    public static function TraerPendientes($request, $response, $args)
+    {
+        $pedidos = Pedido::obtenerPedidoPorEstado("En preparacion");
+        $payload = json_encode(array("listaPedidos" => $pedidos));
+        
+        $response->getBody()->write($payload);
+
+        return $response->withHeader("Content-Type","application/json");  
+    }
+
+    public static function TreaerListos($request, $response, $args)
+    {
+        $pedidos = Pedido::obtenerPedidoPorEstado("Listo para servir");
+        $payload = json_encode(array("listaPedidos" => $pedidos));
+        
+        $response->getBody()->write($payload);
+
+        return $response->withHeader("Content-Type","application/json");  
+    }
+
+
+    public static function IniciarPedido($request,$response,$args)
+    {
+        $codigo_pedido = $args['codigoPedido'];
+        $pedido = Pedido::obtenerPedido($codigo_pedido);
+       
+        if($pedido != null)
+        {
+            $horarioInicio = date('Y-m-d H:i:s');
+            $pedido->setHorarioInicio($horarioInicio);
+            Pedido::modificarPedido($pedido);
+            $payload = json_encode(array("Pedido" => $pedido));
+            $response->getBody()->write($payload);
+        }
+        else
+        {
+            $payload = json_encode(array("mensaje" => "Error! El codigo ingresado no corresponde a ningun pedido."));
+            $response->getBody()->write($payload);
+        }
+        return $response->withHeader("Content-Type","application/json");    
+    }
+
+
+    public static function FinalizarPedido($request,$response,$args)
+    {
+        $codigo_pedido = $args['codigoPedido'];
+        $pedido = Pedido::obtenerPedido($codigo_pedido);
+       
+        if($pedido != null)
+        {
+            $horarioFin = date('Y-m-d H:i:s');
+            $estado = "Listo para servir";
+            $pedido->setHorarioFin($horarioFin);
+            $pedido->setEstado($estado);
+            Pedido::modificarPedido($pedido);
+            $payload = json_encode(array("Pedido" => $pedido));
+            $response->getBody()->write($payload);
+        }
+        else
+        {
+            $payload = json_encode(array("mensaje" => "Error! El codigo ingresado no corresponde a ningun pedido."));
+            $response->getBody()->write($payload);
+        }
+        return $response->withHeader("Content-Type","application/json");    
+    }
+
     public static function BorrarUno($request, $response, $args)
     {
         $codigo_pedido = $args['codigoPedido'];
@@ -185,6 +251,8 @@ class PedidoController extends Pedido implements IInterfaceAPI
         }
         return $codigo;
     }
+
+    
 }
 
 ?>

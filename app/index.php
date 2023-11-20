@@ -58,12 +58,9 @@ $app->group('/pedido', function (RouteCollectorProxy $group) {
   $group->get('[/]', \PedidoController::class . '::TraerTodos');
   $group->get('/{codigoPedido}', \PedidoController::class . '::TraerUno');
   $group->delete('/{codigoPedido}', \PedidoController::class . '::BorrarUno');
- // $group->get('/listos', \PedidoController::class . '::TraerListos');
-  //$group->get('/pendientes', \PedidoController::class . '::TraerPendientes')->add(\Autentificador::class . '::ValidarPreparador');
-  //$group->post('/inicio/{id}', \PedidoController::class . '::IniciarPedido')->add(\Autentificador::class . '::ValidarPreparador');
-  //$group->post('/final/{id}', \PedidoController::class . '::FinalizarPedido')->add(\Autentificador::class . '::ValidarPreparador');
-  //$group->post('/entregar/{id}', \PedidoController::class . '::EntregarPedido')->add(\Autentificador::class . '::ValidarMozo');
-  //$group->get('/{codigoMesa}-{codigoPedido}', \PedidoController::class . '::TraerPedidosMesa');
+  $group->get('/pendientes/cargar', \PedidoController::class . '::TraerPendientes');
+  $group->post('/inicio/{codigoPedido}', \PedidoController::class . '::IniciarPedido');
+  $group->post('/final/{codigoPedido}', \PedidoController::class . '::FinalizarPedido');
   $group->post('[/]', \PedidoController::class . '::CargarUno');
 });
 

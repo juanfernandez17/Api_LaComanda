@@ -75,17 +75,35 @@ class Pedido
         return $query->fetchAll(PDO::FETCH_CLASS,"pedido_producto");
     }
 
+    public static function obtenerPedidoPorEstado($estado)
+    {
+        $objDataAccess = DataAccess::getInstance();
+        $query = $objDataAccess->prepareQuery("SELECT id, codigo_mesa, nombre_cliente, id_producto, estado, codigo_pedido FROM pedido_producto WHERE estado = :estado");
+        $query->bindValue(':estado',$estado, PDO::PARAM_STR);
+        $query->execute();
+
+        return $query->fetchAll(PDO::FETCH_CLASS,'Pedido_producto');
+    }
+
+    public static function obtenerPedido($codigo_pedido)
+    { 
+        $objDataAccess = DataAccess::getInstance();
+        $query = $objDataAccess->prepareQuery("SELECT id, codigo_pedido, estado, id_empleado, id_mesa, tiempo_estimado, horario_inicio, horario_fin FROM pedidos WHERE codigo_pedido = :codigo_pedido");
+        $query->bindValue(':codigo_pedido',$codigo_pedido, PDO::PARAM_STR);
+        $query->execute();
+
+        return $query->fetchObject('Pedido');
+    }
+
     public static function modificarPedido($pedido)
     {
         $objDataAccess = DataAccess::getInstance();
-        $query = $objDataAccess->prepareQuery("UPDATE Pedido SET codigo_pedido = :codigo_pedido, estado = :estado, id_empleado = :id_empleado, id_mesa = :id_mesa, id_prodcuto = :id_producto, nombre_cliente = :nombre_cliente, tiempo_estimado = :tiempo_estimado, horario_inicio = :horario_inicio, horario_fin = :horario_fin WHERE id = :id");
+        $query = $objDataAccess->prepareQuery("UPDATE Pedidos SET codigo_pedido = :codigo_pedido, estado = :estado, id_empleado = :id_empleado, id_mesa = :id_mesa, tiempo_estimado = :tiempo_estimado, horario_inicio = :horario_inicio, horario_fin = :horario_fin WHERE id = :id");
         $query->bindValue(":id", $pedido->getId(), PDO::PARAM_INT);
         $query->bindValue(":codigo_pedido", $pedido->getCodigoPedido(), PDO::PARAM_INT);
         $query->bindValue(":estado", $pedido->getEstado(), PDO::PARAM_STR);
         $query->bindValue(":id_empleado", $pedido->getIdEmpleado(), PDO::PARAM_INT);        
         $query->bindValue(":id_mesa", $pedido->getIdMesa(), PDO::PARAM_INT);
-        $query->bindValue(":id_producto", $pedido->getIdProducto(), PDO::PARAM_INT);
-        $query->bindValue(":nombre_cliente", $pedido->getNombreCliente(), PDO::PARAM_STR);
         $query->bindValue(":tiempo_estimado", $pedido->getTiempoEstimado(), PDO::PARAM_INT);
         $query->bindValue(":horario_inicio", $pedido->getHorarioInicio());
         $query->bindValue(":horario_fin", $pedido->getHorarioFin());
